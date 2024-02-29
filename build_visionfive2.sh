@@ -47,16 +47,6 @@ install_reqpkg() {
 
 get_riscv_system() {
     cd $build_dir
-    if [ -f $build_dir/*rootfs.tar.gz ]; then
-        echo "clean tar..."
-        rm $build_dir/*rootfs.tar.gz
-    fi
-    wget $fedora_core_rootfs_addr -O rootfs.tar.gz
-    if [ ! -f $build_dir/rootfs.tar.gz ]; then
-        echo "system tar download failed!"
-        exit 2
-    fi
-
     if [ -d ${rootfs_dir} ]; then
         echo "clean rootfs..."
         rm -rf ${rootfs_dir}
@@ -80,8 +70,8 @@ get_riscv_system() {
 
     cat << EOF | chroot ${rootfs_dir}  /bin/bash
     echo 'fedora' | passwd --stdin root
-    chkconfig --add extend-root.sh
-    chkconfig extend-root.sh on
+#    chkconfig --add extend-root.sh
+#    chkconfig extend-root.sh on
     dracut --no-kernel /boot/initrd.img
 EOF
 
@@ -150,17 +140,17 @@ mk_img() {
     device=`losetup -f --show -P ${img_file}`
     trap 'LOSETUP_D_IMG' EXIT
 
-    sfdisk ${device} < config/visionfive2-fdisk.cnf 
+    sfdisk ${device} < config/visionfive2-fdisk.cnf
 
     kpartx -va ${device}
     loopX=${device##*\/}
     partprobe ${device}
 
-    dd if=firmware/visionfive-u-boot-with-spl.bin of=/dev/${loopX}p1 bs=512 status=progress && sync    
-    dd if=firmware/visionfive2_fw_payload.img of=/dev/${loopX}p2 bs=512 status=progress && sync    
+    dd if=firmware/visionfive-u-boot-with-spl.bin of=/dev/${loopX}p1 bs=512 status=progress && sync
+    dd if=firmware/visionfive2_fw_payload.img of=/dev/${loopX}p2 bs=512 status=progress && sync
 
     sdbootp=/dev/mapper/${loopX}p3
-    sdrootp=/dev/mapper/${loopX}p4    
+    sdrootp=/dev/mapper/${loopX}p4
 
     mkfs.vfat -n fedora-boot ${sdbootp}
     mkfs.ext4 -L fedora-root ${sdrootp}
@@ -177,7 +167,7 @@ mk_img() {
     line=$(blkid | grep $sdrootp)
     uuid=${line#*UUID=\"}
     uuid=${uuid%%\"*}
-    
+
     echo "label Fedora
     kernel /Image
     initrd /initrd.img
