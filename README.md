@@ -57,21 +57,49 @@ bash build_qemu.sh
 The project requires a file named `fedora-38-core-rootfs.tar.gz` to be built using a Fedora 38 host with the RISC-V architecture. The build process is as follows. If you do not wish to build it yourself, you can use the pre-built file provided by the project.
 
 ```
-sudo su && cd ~
+sudo su
+mkdir /tmp/riscvroot && cd /tmp/riscvroot
 WORKDIR=$(pwd)
 
+mkdir -p $WORKDIR/etc/yum.repos.d/
+
+cat > $WORKDIR/etc/yum.repos.d/fedora-riscv-koji.repo << EOF
+[fedora-riscv-koji]
+name=Fedora RISC-V Koji
+baseurl=http://fedora.riscv.rocks/repos/f38-build/latest/riscv64
+enabled=0
+gpgcheck=0
+
+[fedora-riscv]
+name=Fedora RISC-V
+baseurl=http://fedora.riscv.rocks/repos-dist/f38/latest/riscv64
+#baseurl=https://dl.fedoraproject.org/pub/alt/risc-v/repo/fedora/f39/latest/riscv64/ 1
+#baseurl=https://mirror.math.princeton.edu/pub/alt/risc-v/repo/fedora/f39/latest/riscv64/
+enabled=1
+gpgcheck=0
+
+[fedora-riscv-debuginfo]
+name=Fedora RISC-V - Debug
+baseurl=http://fedora.riscv.rocks/repos-dist/f38/latest/riscv64/debug
+#baseurl=https://dl.fedoraproject.org/pub/alt/risc-v/repo/fedora/f39/latest/riscv64/debug/
+#baseurl=https://mirror.math.princeton.edu/pub/alt/risc-v/repo/fedora/f39/latest/riscv64/debug/
+enabled=0
+gpgcheck=0
+
+[fedora-riscv-source]
+name=Fedora RISC-V - Source
+baseurl=http://fedora.riscv.rocks/repos-dist/f38/latest/src
+#baseurl=https://dl.fedoraproject.org/pub/alt/risc-v/repo/fedora/f39/latest/src/
+#baseurl=https://mirror.math.princeton.edu/pub/alt/risc-v/repo/fedora/f39/latest/src/
+enabled=0
+gpgcheck=0
+
+EOF
+
+dnf -y --repo=fedora-riscv --releasever=38 --forcearch=riscv64 --installroot=$WORKDIR install dnf fedora-release-38
+dnf --installroot=$WORKDIR clean all
+
 cd $WORKDIR
-mkdir rootfs
-mkdir -p rootfs/var/lib/rpm
-rpm --root  $WORKDIR/rootfs/ --initdb
-
-rpm -ivh --nodeps --root $WORKDIR/rootfs/ http://fedora.riscv.rocks/repos-dist/f38/latest/riscv64/Packages/f/fedora-release-38-34.noarch.rpm
-
-mkdir -p $WORKDIR/rootfs/etc/yum.repos.d
-cp /etc/yum.repos.d/*repo $WORKDIR/rootfs/etc/yum.repos.d
-dnf --installroot=$WORKDIR/rootfs/ install dnf --nogpgcheck -y
-
-cd $WORKDIR/rootfs
 tar -zcvf fedora-38-core-rootfs.tar.gz .
 ```
 
